@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HDD Scheduling Simulator</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0ece4;
+  --ink:#18120a;
+  --card:#ffffff;
+  --rule:#ddd8cf;
+  --muted:#9c9488;
+  --hi:#d4420f;
+  --syne:'Inter', sans-serif;
+  --mono:'Inter', sans-serif;
+  --data:'Fira Code', monospace;
+}
+body{font-family:var(--syne);background:var(--bg);color:var(--ink);min-height:100vh}
+
+/* ── TOP STRIP ── */
+.topstrip{
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  align-items:center;
+  gap:24px;
+  padding:16px 36px;
+  background:var(--ink);
+  color:#f0ece4;
+}
+.ts-logo{font-size:22px;font-weight:800;letter-spacing:-0.5px}
+.ts-logo span{color:var(--hi)}
+.ts-tabs{display:flex;gap:2px}
+.ts-tab{
+  padding:7px 16px;
+  font-family:var(--mono);
+  font-size:12px;
+  font-weight:700;
+  letter-spacing:0.06em;
+  border:none;
+  background:transparent;
+  color:rgba(240,236,228,0.45);
+  cursor:pointer;
+  border-radius:4px;
+  transition:all 0.13s;
+  white-space:nowrap;
+}
+.ts-tab:hover{background:rgba(255,255,255,0.08);color:#f0ece4}
+.ts-tab.on{background:var(--hi);color:#fff}
+.ts-actions{display:flex;gap:8px}
+.ts-btn{
+  padding:7px 14px;font-family:var(--mono);font-size:11px;font-weight:700;
+  letter-spacing:0.08em;border-radius:4px;cursor:pointer;transition:all 0.13s;
+}
+.ts-btn-go{background:var(--hi);border:none;color:#fff}
+.ts-btn-go:hover{background:#e8551f}
+.ts-btn-rnd{background:transparent;border:1px solid rgba(240,236,228,0.2);color:rgba(240,236,228,0.6)}
+.ts-btn-rnd:hover{border-color:rgba(240,236,228,0.5);color:#f0ece4}
+
+/* ── BODY LAYOUT ── */
+.body{display:grid;grid-template-columns:1fr 340px;gap:0;min-height:calc(100vh - 56px)}
+
+/* ── LEFT: CANVAS ZONE ── */
+.left{padding:28px 32px;display:flex;flex-direction:column;gap:20px;border-right:1px solid var(--rule)}
+
+/* Algo badge + stats row */
+.algo-row{display:flex;align-items:center;gap:0;border:1px solid var(--rule);border-radius:8px;background:var(--card);overflow:hidden}
+.algo-badge{
+  padding:18px 24px;
+  display:flex;flex-direction:column;gap:2px;
+  border-right:1px solid var(--rule);
+  min-width:160px;
+}
+.algo-badge-name{font-size:32px;font-weight:800;letter-spacing:-0.5px;line-height:1}
+.algo-badge-sub{font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:0.05em;margin-top:4px}
+.stat-cells{display:flex;flex:1}
+.stat-cell{
+  flex:1;padding:18px 20px;border-right:1px solid var(--rule);
+  display:flex;flex-direction:column;gap:3px;
+}
+.stat-cell:last-child{border-right:none}
+.sc-val{font-size:28px;font-weight:800;font-family:var(--data);line-height:1}
+.sc-lbl{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase}
+
+/* Canvas card */
+.canvas-card{background:var(--card);border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+.canvas-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 18px;border-bottom:1px solid var(--rule);
+}
+.canvas-head-label{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:0.14em;color:var(--muted);text-transform:uppercase}
+.canvas-inner{padding:20px 18px 12px}
+canvas#tc{display:block;width:100%}
+.pb-row{display:flex;align-items:center;gap:10px;padding:10px 18px 14px}
+.pb-b{
+  width:28px;height:28px;border-radius:4px;border:1px solid var(--rule);
+  background:var(--bg);cursor:pointer;font-size:12px;
+  display:flex;align-items:center;justify-content:center;
+  transition:all 0.12s;font-family:var(--mono);color:var(--ink);
+}
+.pb-b:hover{border-color:var(--hi);color:var(--hi)}
+.pb-track{flex:1;height:2px;background:var(--rule);border-radius:1px;overflow:hidden}
+.pb-fill{height:100%;background:var(--hi);border-radius:1px;transition:width 0.1s linear}
+.pb-lbl{font-family:var(--data);font-size:11px;color:var(--muted);min-width:56px;text-align:right}
+
+/* Sequence row */
+.seq-card{
+  background:var(--card);border:1px solid var(--rule);border-radius:8px;
+  padding:14px 18px;display:flex;flex-wrap:wrap;align-items:center;gap:5px;min-height:52px;
+}
+.sq{
+  font-family:var(--data);font-size:12px;font-weight:700;
+  padding:4px 9px;border-radius:3px;border:1px solid var(--rule);
+  background:var(--bg);color:var(--ink);
+}
+.sq.s-head{background:var(--ink);color:#f0ece4;border-color:var(--ink)}
+.sq.s-cur{border-width:2px;color:#fff}
+.sq-a{font-family:var(--mono);font-size:11px;color:var(--rule)}
+
+/* ── RIGHT: PANEL ── */
+.right{background:var(--card);display:flex;flex-direction:column}
+
+/* Config section */
+.panel-sec{padding:20px 22px;border-bottom:1px solid var(--rule)}
+.panel-sec-title{
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:0.16em;
+  color:var(--muted);text-transform:uppercase;margin-bottom:14px;
+}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.fld label{font-family:var(--mono);font-size:9px;font-weight:600;color:var(--muted);letter-spacing:0.08em;display:block;margin-bottom:4px}
+.fld input{
+  width:100%;background:var(--bg);border:1px solid var(--rule);border-radius:4px;
+  color:var(--ink);font-family:var(--data);font-size:12px;padding:8px 10px;
+  outline:none;transition:border-color 0.13s;
+}
+.fld input:focus{border-color:var(--hi)}
+.fld-full{grid-column:1/-1}
+
+/* Algo selector grid */
+.algo-grid{
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  padding:18px 22px;border-bottom:1px solid var(--rule);
+}
+.ag-btn{
+  padding:12px 14px;border-radius:6px;border:1.5px solid var(--rule);
+  background:var(--bg);cursor:pointer;text-align:left;transition:all 0.13s;
+}
+.ag-btn:hover{border-color:currentColor;background:var(--card)}
+.ag-btn.on{background:var(--card)}
+.ag-dot{width:8px;height:8px;border-radius:50%;margin-bottom:8px}
+.ag-name{font-size:17px;font-weight:800;letter-spacing:-0.2px;display:block;line-height:1}
+.ag-full{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:0.02em;display:block;margin-top:4px;line-height:1.3}
+.ag-moves{font-family:var(--data);font-size:13px;font-weight:700;display:block;margin-top:6px}
+
+/* Comparison bars */
+.cmp-sec{padding:18px 22px;flex:1}
+.cmp-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.cmp-name{font-family:var(--mono);font-size:11px;font-weight:700;min-width:64px}
+.cmp-bar-bg{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
+.cmp-bar-fg{height:100%;border-radius:3px;transition:width 0.5s cubic-bezier(.4,0,.2,1)}
+.cmp-val{font-family:var(--data);font-size:11px;font-weight:700;min-width:38px;text-align:right}
+
+@media(max-width:900px){
+  .body{grid-template-columns:1fr}
+  .right{border-top:1px solid var(--rule)}
+  .algo-grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="topstrip">
+  <div style="display: flex; align-items: baseline; gap: 24px;">
+    <div class="ts-logo">Disk<span>Sim</span></div>
+    <div style="font-family: var(--mono); font-size: 12px; font-weight: 600; color: #a19d94; letter-spacing: 0.05em;">
+      24CSR006 | 24CSR044 | 24CSR059
+    </div>
+  </div>
+  <div class="ts-tabs" id="tsTabs"></div>
+  <div class="ts-actions">
+    <button class="ts-btn ts-btn-rnd" onclick="randomize()">⟳ RANDOM</button>
+    <button class="ts-btn ts-btn-go" onclick="runAll()">▶ RUN</button>
+  </div>
+</div>
+
+<div class="body">
+
+  <div class="left">
+
+    <div class="algo-row">
+      <div class="algo-badge">
+        <div class="algo-badge-name" id="aName">FCFS</div>
+        <div class="algo-badge-sub" id="aFull">First Come First Served</div>
+      </div>
+      <div class="stat-cells">
+        <div class="stat-cell">
+          <div class="sc-val" id="scMoves">—</div>
+          <div class="sc-lbl">Total Moves</div>
+        </div>
+        <div class="stat-cell">
+          <div class="sc-val" id="scAvg">—</div>
+          <div class="sc-lbl">Avg Seek</div>
+        </div>
+        <div class="stat-cell">
+          <div class="sc-val" id="scN">—</div>
+          <div class="sc-lbl">Requests</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas-card">
+      <div class="canvas-head">
+        <span class="canvas-head-label">Head Movement · Cylinder Track</span>
+        <span id="stepBadge" style="font-family:var(--mono);font-weight:600;font-size:10px;color:var(--muted)">Step 0</span>
+      </div>
+      <div class="canvas-inner"><canvas id="tc" height="210"></canvas></div>
+      <div class="pb-row">
+        <button class="pb-b" id="playBtn" onclick="togglePlay()">▶</button>
+        <button class="pb-b" onclick="resetAnim()">↺</button>
+        <div class="pb-track"><div class="pb-fill" id="pbFill" style="width:0%"></div></div>
+        <div class="pb-lbl" id="pbLbl">0 / 0</div>
+      </div>
+    </div>
+
+    <div class="seq-card" id="seqCard"></div>
+
+  </div>
+
+  <div class="right">
+
+    <div class="panel-sec">
+      <div class="panel-sec-title">Configuration</div>
+      <div class="field-row">
+        <div class="fld"><label>MAX CYLINDERS</label><input type="number" id="maxCyl" value="199" min="20" max="999"></div>
+        <div class="fld"><label>INITIAL HEAD</label><input type="number" id="initHead" value="53" min="0"></div>
+        <div class="fld"><label>DIRECTION</label><input type="text" id="direction" value="right"></div>
+        <div class="fld fld-full"><label>REQUEST QUEUE</label><input type="text" id="requests" value="98,183,37,122,14,124,65,67"></div>
+      </div>
+    </div>
+
+    <div class="panel-sec-title" style="padding:16px 22px 0;font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:0.16em;color:var(--muted);text-transform:uppercase">Algorithm</div>
+    <div class="algo-grid" id="algoGrid"></div>
+
+    <div class="cmp-sec">
+      <div class="panel-sec-title" style="margin-bottom:14px">Comparison</div>
+      <div id="cmpRows"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const ALGOS={
+  fcfs:{name:'FCFS',full:'First Come First Served',color:'#d4420f',
+    run(r,h){return[h,...r]}},
+  sstf:{name:'SSTF',full:'Shortest Seek Time First',color:'#2563b0',
+    run(r,h){const rem=[...r],s=[h];let c=h;while(rem.length){let b=0;for(let i=1;i<rem.length;i++)if(Math.abs(rem[i]-c)<Math.abs(rem[b]-c))b=i;c=rem.splice(b,1)[0];s.push(c)}return s}},
+  scan:{name:'SCAN',full:'Elevator Algorithm',color:'#6d28a0',
+    run(r,h,max,d){const L=r.filter(x=>x<h).sort((a,b)=>b-a),R=r.filter(x=>x>=h).sort((a,b)=>a-b),s=[h];if(d==='right'){R.forEach(x=>s.push(x));s.push(max);L.forEach(x=>s.push(x))}else{L.forEach(x=>s.push(x));s.push(0);R.forEach(x=>s.push(x))}return s}},
+  cscan:{name:'C-SCAN',full:'Circular SCAN',color:'#b45309',
+    run(r,h,max){const L=r.filter(x=>x<h).sort((a,b)=>a-b),R=r.filter(x=>x>=h).sort((a,b)=>a-b),s=[h];R.forEach(x=>s.push(x));s.push(max);s.push(0);L.forEach(x=>s.push(x));return s}},
+  look:{name:'LOOK',full:'Optimized SCAN',color:'#0f7a4a',
+    run(r,h,max,d){const L=r.filter(x=>x<h).sort((a,b)=>b-a),R=r.filter(x=>x>=h).sort((a,b)=>a-b),s=[h];if(d==='right'){R.forEach(x=>s.push(x));L.forEach(x=>s.push(x))}else{L.forEach(x=>s.push(x));R.forEach(x=>s.push(x))}return s}},
+  clook:{name:'C-LOOK',full:'Circular LOOK',color:'#a31040',
+    run(r,h){const L=r.filter(x=>x<h).sort((a,b)=>a-b),R=r.filter(x=>x>=h).sort((a,b)=>a-b),s=[h];R.forEach(x=>s.push(x));L.forEach(x=>s.push(x));return s}}
+};
+
+let cur='fcfs',res={},seq=[],step=0,playing=false,timer=null;
+
+function gi(){
+  const max=parseInt(document.getElementById('maxCyl').value)||199;
+  const head=parseInt(document.getElementById('initHead').value)||53;
+  const dir=document.getElementById('direction').value.trim().toLowerCase()||'right';
+  const reqs=document.getElementById('requests').value.split(',').map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=0&&n<=max);
+  return{max,head,dir,reqs};
+}
+function seekT(s){let t=0;for(let i=1;i<s.length;i++)t+=Math.abs(s[i]-s[i-1]);return t}
+
+function runAll(){
+  const{max,head,dir,reqs}=gi();res={};
+  for(const k in ALGOS){const s=ALGOS[k].run(reqs,head,max,dir);res[k]={seq:s,moves:seekT(s),avg:(seekT(s)/reqs.length).toFixed(1)}}
+  document.getElementById('scN').textContent=reqs.length;
+  buildTabs();buildAlgoGrid();pick(cur);buildCmp();
+}
+
+function buildTabs(){
+  document.getElementById('tsTabs').innerHTML=Object.keys(ALGOS).map(k=>{
+    const a=ALGOS[k];
+    return`<button class="ts-tab${k===cur?' on':''}" onclick="pick('${k}')" style="${k===cur?'':''}">
+      ${a.name}
+    </button>`
+  }).join('');
+}
+
+function buildAlgoGrid(){
+  document.getElementById('algoGrid').innerHTML=Object.keys(ALGOS).map(k=>{
+    const a=ALGOS[k],r=res[k]||{moves:'—'};
+    return`<button class="ag-btn${k===cur?' on':''}" onclick="pick('${k}')"
+      style="${k===cur?'border-color:'+a.color:''}">
+      <span class="ag-dot" style="background:${a.color}"></span>
+      <span class="ag-name" style="color:${a.color}">${a.name}</span>
+      <span class="ag-full">${a.full}</span>
+      <span class="ag-moves" style="color:${a.color}">${r.moves}</span>
+    </button>`
+  }).join('');
+}
+
+function pick(k){
+  cur=k;
+  const a=ALGOS[k],r=res[k];
+  // tabs
+  document.querySelectorAll('.ts-tab').forEach(b=>{
+    const isOn=b.textContent.trim()===a.name;
+    b.classList.toggle('on',isOn);
+    b.style.background=isOn?a.color:'';
+  });
+  // algo grid
+  document.querySelectorAll('.ag-btn').forEach((b,i)=>{
+    const key=Object.keys(ALGOS)[i];
+    b.classList.toggle('on',key===k);
+    b.style.borderColor=key===k?ALGOS[key].color:'';
+  });
+  document.getElementById('aName').textContent=a.name;
+  document.getElementById('aName').style.color=a.color;
+  document.getElementById('aFull').textContent=a.full;
+  if(r){
+    document.getElementById('scMoves').textContent=r.moves;
+    document.getElementById('scMoves').style.color=a.color;
+    document.getElementById('scAvg').textContent=r.avg;
+    seq=r.seq;
+  }
+  step=0;playing=false;clearTimeout(timer);
+  document.getElementById('playBtn').textContent='▶';
+  draw();drawSeq();updatePb();buildCmp();
+}
+
+function draw(){
+  const cv=document.getElementById('tc');
+  const W=cv.offsetWidth||600;cv.width=W;
+  const H=210,ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const{max}=gi();
+  const a=ALGOS[cur];
+  const PL=40,PR=16,PT=28,PB=28;
+  const cw=W-PL-PR,ch=H-PT-PB;
+  const show=Math.min(step+1,seq.length-1);
+  const tx=v=>PL+(v/max)*cw;
+  const ty=i=>PT+(i/Math.max(seq.length-1,1))*ch;
+
+  // subtle grid
+  ctx.strokeStyle='#eae6de';ctx.lineWidth=0.5;
+  for(let i=0;i<=8;i++){const x=PL+(i/8)*cw;ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+ch);ctx.stroke()}
+
+  // axis labels
+  ctx.fillStyle='#b5afa5';ctx.font='10px Fira Code, monospace';ctx.textAlign='center';
+  for(let i=0;i<=8;i++)ctx.fillText(Math.round((i/8)*max),PL+(i/8)*cw,H-10);
+  ctx.textAlign='right';ctx.fillStyle='#b5afa5';
+  for(let i=0;i<=show;i++)ctx.fillText(i,PL-6,ty(i)+3);
+
+  // path glow
+  for(let i=0;i<show;i++){
+    const x1=tx(seq[i]),x2=tx(seq[i+1]),y1=ty(i),y2=ty(i+1);
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
+    ctx.strokeStyle=a.color+'22';ctx.lineWidth=10;ctx.lineCap='round';ctx.stroke();
+  }
+  // path line
+  for(let i=0;i<show;i++){
+    const x1=tx(seq[i]),x2=tx(seq[i+1]),y1=ty(i),y2=ty(i+1);
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);
+    ctx.strokeStyle=a.color;ctx.lineWidth=1.8;ctx.lineCap='round';ctx.stroke();
+  }
+
+  // dots + labels
+  for(let i=0;i<=show;i++){
+    const x=tx(seq[i]),y=ty(i);
+    const isH=i===0,isC=i===show;
+    ctx.beginPath();ctx.arc(x,y,isH?6:isC?5:3,0,Math.PI*2);
+    ctx.fillStyle=isH?'#18120a':isC?a.color:a.color+'88';ctx.fill();
+    if(isH||isC){ctx.strokeStyle=isH?a.color:'#fff';ctx.lineWidth=1.5;ctx.stroke()}
+    if(isH||isC){
+      ctx.fillStyle=isH?'#18120a':a.color;
+      ctx.font='bold 11px Fira Code, monospace';
+      ctx.textAlign=x>W-60?'right':'left';
+      ctx.fillText(seq[i],x+(x>W-60?-9:9),y-8);
+    }
+  }
+
+  // axes
+  ctx.strokeStyle='#d8d2c8';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(PL,PT);ctx.lineTo(PL,PT+ch);ctx.moveTo(PL,PT+ch);ctx.lineTo(PL+cw,PT+ch);ctx.stroke();
+
+  // step badge
+  document.getElementById('stepBadge').textContent=`Step ${step} of ${seq.length-1}`;
+}
+
+function drawSeq(){
+  const a=ALGOS[cur];
+  const show=Math.min(step+2,seq.length);
+  document.getElementById('seqCard').innerHTML=seq.slice(0,show).map((v,i)=>{
+    let cls='sq';let st='';
+    if(i===0){cls+=' s-head';}
+    else if(i===show-1){cls+=' s-cur';st=`style="background:${a.color};border-color:${a.color}"`;}
+    return`<span class="${cls}" ${st}>${v}</span>${i<show-1?'<span class="sq-a">›</span>':''}`
+  }).join('');
+}
+
+function updatePb(){
+  const total=seq.length-1;
+  const pct=total>0?(step/total)*100:0;
+  document.getElementById('pbFill').style.width=pct+'%';
+  document.getElementById('pbLbl').textContent=`${step}/${total}`;
+}
+
+function buildCmp(){
+  if(!Object.keys(res).length)return;
+  const maxM=Math.max(...Object.values(res).map(r=>r.moves));
+  document.getElementById('cmpRows').innerHTML=Object.keys(ALGOS).map(k=>{
+    const a=ALGOS[k],r=res[k];
+    const pct=Math.round((r.moves/maxM)*100);
+    const isC=k===cur;
+    return`<div class="cmp-row">
+      <div class="cmp-name" style="color:${a.color};${isC?'font-weight:700':''}">${a.name}</div>
+      <div class="cmp-bar-bg"><div class="cmp-bar-fg" style="width:${pct}%;background:${a.color}${isC?'':'88'}"></div></div>
+      <div class="cmp-val" style="color:${a.color}">${r.moves}</div>
+    </div>`
+  }).join('');
+}
+
+function togglePlay(){
+  playing=!playing;
+  document.getElementById('playBtn').textContent=playing?'⏸':'▶';
+  if(playing)tick();
+}
+function tick(){
+  if(!playing)return;
+  if(step>=seq.length-1){playing=false;document.getElementById('playBtn').textContent='▶';return}
+  step++;draw();drawSeq();updatePb();timer=setTimeout(tick,480);
+}
+function resetAnim(){
+  playing=false;clearTimeout(timer);
+  document.getElementById('playBtn').textContent='▶';
+  step=0;draw();drawSeq();updatePb();
+}
+function randomize(){
+  const max=parseInt(document.getElementById('maxCyl').value)||199;
+  document.getElementById('initHead').value=Math.floor(Math.random()*max);
+  const n=6+Math.floor(Math.random()*6);
+  document.getElementById('requests').value=Array.from({length:n},()=>Math.floor(Math.random()*max)).join(',');
+  runAll();
+}
+
+runAll();
+window.addEventListener('resize',()=>{if(seq.length)draw()});
+</script>
+</body>
+</html>
