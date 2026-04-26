@@ -20,7 +20,6 @@
 }
 body{font-family:var(--syne);background:var(--bg);color:var(--ink);min-height:100vh}
 
-/* ── TOP STRIP ── */
 .topstrip{
   display:grid;
   grid-template-columns:auto 1fr auto;
@@ -173,7 +172,7 @@ canvas#tc{display:block;width:100%}
 
 <div class="topstrip">
   <div style="display: flex; align-items: baseline; gap: 24px;">
-    <div class="ts-logo">Disk<span> Scheduler</span></div>
+    <div class="ts-logo">Disk<span>Sim</span></div>
     <div style="font-family: var(--mono); font-size: 12px; font-weight: 600; color: #a19d94; letter-spacing: 0.05em;">
       24CSR006 | 24CSR044 | 24CSR059
     </div>
@@ -235,7 +234,12 @@ canvas#tc{display:block;width:100%}
       <div class="field-row">
         <div class="fld"><label>MAX CYLINDERS</label><input type="number" id="maxCyl" value="199" min="20" max="999"></div>
         <div class="fld"><label>INITIAL HEAD</label><input type="number" id="initHead" value="53" min="0"></div>
-        <div class="fld"><label>DIRECTION</label><input type="text" id="direction" value="right"></div>
+        <div class="fld"><label>DIRECTION</label>
+          <select id="direction" style="width:100%;background:var(--bg);border:1px solid var(--rule);border-radius:4px;color:var(--ink);font-family:var(--data);font-size:12px;padding:8px 10px;outline:none;cursor:pointer;">
+            <option value="right" selected>Right</option>
+            <option value="left">Left</option>
+          </select>
+        </div>
         <div class="fld fld-full"><label>REQUEST QUEUE</label><input type="text" id="requests" value="98,183,37,122,14,124,65,67"></div>
       </div>
     </div>
